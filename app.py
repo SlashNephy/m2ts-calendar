@@ -15,6 +15,7 @@ CLASS_NAME_FORMAT = os.getenv("CLASS_NAME_FORMAT", r"%YEAR%-%MONTH%")
 DEFAULT_CLASS_NAME = os.getenv("DEFAULT_CLASS_NAME")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
 CLEANUP_BROKEN_LINKS = bool(os.getenv("CLEANUP_BROKEN_LINKS"))
+DRYRUN = bool(os.getenv("DRYRUN"))
 
 
 # Represents a single file in the source directory.
@@ -44,10 +45,10 @@ def extract_class_name(filename, source_patterns, class_pattern) -> Optional[str
 
     return DEFAULT_CLASS_NAME
 
-def sort_source_paths(patterns) -> list[SourcePath]:
+def sort_source_paths(source_patterns, class_pattern) -> list[SourcePath]:
     paths = []
     for path in enumerate_source_files():
-        class_name = extract_class_name(path.name, patterns)
+        class_name = extract_class_name(path.name, source_patterns, class_pattern)
         if not class_name:
             continue
 
@@ -73,7 +74,7 @@ def sort_source_paths(patterns) -> list[SourcePath]:
     return sorted(paths, key=lambda x: x.class_name)
 
 def check(source_patterns, class_pattern):
-    paths = sort_source_paths(source_patterns)
+    paths = sort_source_paths(source_patterns, class_pattern)
 
     for key, sources in itertools.groupby(paths, key=lambda x: x.class_name):
         key_dir = Path(TARGET_DIRECTORY) / key
@@ -89,18 +90,20 @@ def check(source_patterns, class_pattern):
             if link_path.exists() and link_path.readlink() == source.path:
                 continue
 
-            if not link_path.parent.exists():
+            if not link_path.parent.exists() and not DRYRUN:
                 link_path.parent.mkdir(parents=True)
 
             print(f"Creating link: {link_path}")
-            link_path.symlink_to(source.path)
+            if not DRYRUN:
+                link_path.symlink_to(source.path)
 
 def clean_up():
     if CLEANUP_BROKEN_LINKS:
         for path in Path(TARGET_DIRECTORY).glob("**/*"):
             if path.is_symlink() and not path.readlink().exists():
                 print(f"Removing invalid link: {path}")
-                path.unlink()
+                if not DRYRUN:
+                    path.unlink()
 
 def main():
     # Compile regex patterns in order to parse filenames
