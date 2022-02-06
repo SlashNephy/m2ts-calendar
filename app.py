@@ -1,64 +1,109 @@
-import glob
 import itertools
 import os
 import re
 import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Generator, Optional
 
-CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
 FILENAME_FORMATS = os.environ["FILENAME_FORMATS"]
+SOURCE_DIRECTORY = os.environ["SOURCE_DIRECTORY"]
 SOURCE_FILE_GLOB = os.environ["SOURCE_FILE_GLOB"]
+INCLUDE_CHAPTER_FILE = bool(os.getenv("INCLUDE_CHAPTER_FILE"))
 TARGET_DIRECTORY = os.environ["TARGET_DIRECTORY"]
-CONVERT_SHORTYEAR_TO_FULLYEAR = bool(os.getenv("CONVERT_SHORTYEAR_TO_FULLYEAR"))
 DEFAULT_CLASS_NAME = os.getenv("DEFAULT_CLASS_NAME")
-CLEANUP_INVALID_LINKS = bool(os.getenv("CLEANUP_INVALID_LINKS"))
+CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
+CONVERT_SHORTYEAR_TO_FULLYEAR = bool(os.getenv("CONVERT_SHORTYEAR_TO_FULLYEAR"))
+CLEANUP_BROKEN_LINKS = bool(os.getenv("CLEANUP_BROKEN_LINKS"))
 
+
+# Represents a single file in the source directory.
+@dataclass
+class SourcePath:
+    class_name: str
+    path: Path
+    is_chapter_file: bool
+
+# Iterate over all files in the source directory.
+def enumerate_source_files() -> Generator[Path, None, None]:
+    return Path(SOURCE_DIRECTORY).glob(SOURCE_FILE_GLOB)
+
+# Extract common class name from filename.
+def extract_class_name(filename, patterns) -> Optional[str]:
+    for pattern in patterns:
+        match = pattern.match(filename)
+        if match:
+            try:
+                groups = match.groupdict()
+                year = groups.get("YEAR") or f"{'20' if CONVERT_SHORTYEAR_TO_FULLYEAR else ''}{groups['SHORTYEAR']}"
+                month = groups["MONTH"]
+
+                return f"{year}-{month}"
+            except IndexError:
+                continue
+
+    return DEFAULT_CLASS_NAME
+
+def sort_source_paths(patterns) -> list[SourcePath]:
+    paths = []
+    for path in enumerate_source_files():
+        class_name = extract_class_name(path.name, patterns)
+        if not class_name:
+            continue
+
+        paths.append(
+            SourcePath(class_name, path, False)
+        )
+
+        if INCLUDE_CHAPTER_FILE:
+            parent_dir = path.parent
+            chapter_filename = path.with_suffix(".chapter").name
+
+            chapter_paths = (
+                parent_dir / chapter_filename,
+                parent_dir / "chapters" / chapter_filename,
+            )
+            for chapter_path in chapter_paths:
+                if chapter_path.exists():
+                    paths.append(
+                        SourcePath(class_name, chapter_path, True)
+                    )
+                    break
+
+    return sorted(paths, key=lambda x: x.class_name)
 
 def check(patterns):
-    paths = []
-    for path in glob.glob(SOURCE_FILE_GLOB):
-        filename = os.path.basename(path)
+    paths = sort_source_paths(patterns)
 
-        for pattern in patterns:
-            match = pattern.match(filename)
-            if match:
-                try:
-                    groups = match.groupdict()
-                    year = groups.get("YEAR") or f"{'20' if CONVERT_SHORTYEAR_TO_FULLYEAR else ''}{groups['SHORTYEAR']}"
-                    month = groups.get("MONTH")
+    for key, sources in itertools.groupby(paths, key=lambda x: x.class_name):
+        key_dir = Path(TARGET_DIRECTORY) / key
 
-                    key = f"{year}-{month}"
-                    break
-                except IndexError:
-                    continue
-        else:
-            key = DEFAULT_CLASS_NAME
-            if not key:
+        for source in sources:
+            if source.is_chapter_file:
+                link_path = key_dir / "chapters" / source.path.name
+            else:
+                link_path = key_dir / source.path.name
+
+            if link_path.exists() and not link_path.is_symlink():
+                continue
+            if link_path.exists() and link_path.readlink() == source.path:
                 continue
 
-        paths.append((path, key))
-
-    paths.sort(key=lambda x: x[1])
-    for key, values in itertools.groupby(paths, key=lambda x: x[1]):
-        key_dir = os.path.join(TARGET_DIRECTORY, key)
-        if not os.path.exists(key_dir):
-            os.makedirs(key_dir)
-
-        for path, _ in values:
-            link_path = os.path.join(key_dir, os.path.basename(path))
-            if os.path.exists(link_path):
-                continue
+            if not link_path.parent.exists():
+                link_path.parent.mkdir(parents=True)
 
             print(f"Creating link: {link_path}")
-            os.symlink(path, link_path)
+            link_path.symlink_to(source.path)
 
 def clean_up():
-    if CLEANUP_INVALID_LINKS:
-        for path in glob.glob(f"{TARGET_DIRECTORY}/**/*", recursive=True):
-            if os.path.islink(path) and not os.path.exists(os.readlink(path)):
+    if CLEANUP_BROKEN_LINKS:
+        for path in Path(TARGET_DIRECTORY).glob("**/*"):
+            if path.is_symlink() and not path.readlink().exists():
                 print(f"Removing invalid link: {path}")
-                os.remove(path)
+                path.unlink()
 
 def main():
+    # Compile regex patterns in order to parse filenames
     filename_patterns = [
         re.compile(
             re.sub(r"%([A-Z_]+)%", lambda m: fr"(?P<{m.group(1)}>.+)", re.escape(fmt))
