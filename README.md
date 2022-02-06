@@ -1,6 +1,9 @@
 # m2ts-calendar
 🧹 Create symlinks for .m2ts files and classify them into directories in yyyy-mm format.
 
+![image](https://user-images.githubusercontent.com/7302150/152669250-38859e0a-c768-4b38-a768-9e53c4a09a10.png)
+![image](https://user-images.githubusercontent.com/7302150/152669262-5f9738e2-6afd-47e5-9173-4e8b229e7397.png)
+
 ## docker-compose
 
 ```yml
