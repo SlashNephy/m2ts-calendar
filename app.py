@@ -15,6 +15,7 @@ CLASS_NAME_FORMAT = os.getenv("CLASS_NAME_FORMAT", r"%YEAR%-%MONTH%")
 DEFAULT_CLASS_NAME = os.getenv("DEFAULT_CLASS_NAME")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
 CLEANUP_BROKEN_LINKS = os.getenv("CLEANUP_BROKEN_LINKS") == "1"
+CLEANUP_EMPTY_DIRECTORIES = os.getenv("CLEANUP_EMPTY_DIRECTORIES") == "1"
 DRYRUN = os.getenv("DRYRUN") == "1"
 
 
@@ -104,6 +105,13 @@ def clean_up():
                 print(f"Removing invalid link: {path}")
                 if not DRYRUN:
                     path.unlink()
+
+    if CLEANUP_EMPTY_DIRECTORIES:
+        for path in Path(TARGET_DIRECTORY).glob("*"):
+            if path.is_dir() and not path.iterdir():
+                print(f"Removing empty directory: {path}")
+                if not DRYRUN:
+                    path.rmdir()
 
 def main():
     # Compile regex patterns in order to parse filenames
