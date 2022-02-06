@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Optional
 
-FILENAME_FORMATS = os.environ["FILENAME_FORMATS"]
+FILENAME_FORMATS = [v for k, v in os.environ.items() if k.startswith("FILENAME_FORMATS")]
 SOURCE_DIRECTORY = os.environ["SOURCE_DIRECTORY"]
 SOURCE_FILE_GLOB = os.environ["SOURCE_FILE_GLOB"]
 INCLUDE_CHAPTER_FILE = bool(os.getenv("INCLUDE_CHAPTER_FILE"))
@@ -111,8 +111,11 @@ def main():
         re.compile(
             re.sub(r"%([A-Z_]+)%", lambda m: fr"(?P<{m.group(1)}>.+)", re.escape(fmt))
         )
-        for fmt in FILENAME_FORMATS.split(",")
+        for fmt in FILENAME_FORMATS
     ]
+    if not source_patterns:
+        raise ValueError("No filename patterns defined")
+
     class_pattern = re.sub(r"%([A-Z_]+)%", lambda m: f"{{{m.group(1)}}}", CLASS_NAME_FORMAT)
 
     while True:

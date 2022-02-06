@@ -17,7 +17,8 @@ services:
       - /mnt/records:/mnt/records:ro
       - /mnt/records_links:/mnt/records_links
     environment:
-      FILENAME_FORMATS: '[%SHORTYEAR%-%MONTH%-%DAY%(%DOW%)_%HOUR%-%MIN%][%TYPE%_%HALF_WIDTH_CHNAME%]%HALF_WIDTH_TITLE%'
+      FILENAME_FORMATS1: '[%SHORTYEAR%-%MONTH%-%DAY%(%DOW%)_%HOUR%-%MIN%][%TYPE%_%HALF_WIDTH_CHNAME%]%HALF_WIDTH_TITLE%'
+      FILENAME_FORMATS2: '[%SHORTYEAR%-%MONTH%-%DAY%_%HOUR%-%MIN%][%CHNAME%]%TITLE%'
       SOURCE_DIRECTORY: /mnt/records
       SOURCE_FILE_GLOB: '**/*.m2ts'
       INCLUDE_CHAPTER_FILE: 1
@@ -25,7 +26,6 @@ services:
       CLASS_NAME_FORMAT: '%YEAR%-%MONTH%'
       DEFAULT_CLASS_NAME: 'misc'
       CHECK_INTERVAL_SECONDS: 60
-      CONVERT_SHORTYEAR_TO_FULLYEAR: 1
       CLEANUP_BROKEN_LINKS: 1
       DRYRUN: 0
 ```
