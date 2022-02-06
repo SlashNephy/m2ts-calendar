@@ -9,13 +9,13 @@ from typing import Generator, Optional
 FILENAME_FORMATS = [v for k, v in os.environ.items() if k.startswith("FILENAME_FORMATS")]
 SOURCE_DIRECTORY = os.environ["SOURCE_DIRECTORY"]
 SOURCE_FILE_GLOB = os.environ["SOURCE_FILE_GLOB"]
-INCLUDE_CHAPTER_FILE = bool(os.getenv("INCLUDE_CHAPTER_FILE"))
+INCLUDE_CHAPTER_FILE = os.getenv("INCLUDE_CHAPTER_FILE") == "1"
 TARGET_DIRECTORY = os.environ["TARGET_DIRECTORY"]
 CLASS_NAME_FORMAT = os.getenv("CLASS_NAME_FORMAT", r"%YEAR%-%MONTH%")
 DEFAULT_CLASS_NAME = os.getenv("DEFAULT_CLASS_NAME")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
-CLEANUP_BROKEN_LINKS = bool(os.getenv("CLEANUP_BROKEN_LINKS"))
-DRYRUN = bool(os.getenv("DRYRUN"))
+CLEANUP_BROKEN_LINKS = os.getenv("CLEANUP_BROKEN_LINKS") == "1"
+DRYRUN = os.getenv("DRYRUN") == "1"
 
 
 # Represents a single file in the source directory.
