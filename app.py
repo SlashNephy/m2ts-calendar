@@ -11,9 +11,9 @@ SOURCE_DIRECTORY = os.environ["SOURCE_DIRECTORY"]
 SOURCE_FILE_GLOB = os.environ["SOURCE_FILE_GLOB"]
 INCLUDE_CHAPTER_FILE = bool(os.getenv("INCLUDE_CHAPTER_FILE"))
 TARGET_DIRECTORY = os.environ["TARGET_DIRECTORY"]
+CLASS_NAME_FORMAT = os.getenv("CLASS_NAME_FORMAT", r"%YEAR%-%MONTH%")
 DEFAULT_CLASS_NAME = os.getenv("DEFAULT_CLASS_NAME")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
-CONVERT_SHORTYEAR_TO_FULLYEAR = bool(os.getenv("CONVERT_SHORTYEAR_TO_FULLYEAR"))
 CLEANUP_BROKEN_LINKS = bool(os.getenv("CLEANUP_BROKEN_LINKS"))
 
 
@@ -29,16 +29,16 @@ def enumerate_source_files() -> Generator[Path, None, None]:
     return Path(SOURCE_DIRECTORY).glob(SOURCE_FILE_GLOB)
 
 # Extract common class name from filename.
-def extract_class_name(filename, patterns) -> Optional[str]:
-    for pattern in patterns:
+def extract_class_name(filename, source_patterns, class_pattern) -> Optional[str]:
+    for pattern in source_patterns:
         match = pattern.match(filename)
         if match:
             try:
                 groups = match.groupdict()
-                year = groups.get("YEAR") or f"{'20' if CONVERT_SHORTYEAR_TO_FULLYEAR else ''}{groups['SHORTYEAR']}"
-                month = groups["MONTH"]
+                if "YEAR" not in groups and "SHORTYEAR" in groups:
+                    groups["YEAR"] = f"20{groups['SHORTYEAR']}"
 
-                return f"{year}-{month}"
+                return class_pattern.format(**groups)
             except IndexError:
                 continue
 
@@ -72,8 +72,8 @@ def sort_source_paths(patterns) -> list[SourcePath]:
 
     return sorted(paths, key=lambda x: x.class_name)
 
-def check(patterns):
-    paths = sort_source_paths(patterns)
+def check(source_patterns, class_pattern):
+    paths = sort_source_paths(source_patterns)
 
     for key, sources in itertools.groupby(paths, key=lambda x: x.class_name):
         key_dir = Path(TARGET_DIRECTORY) / key
@@ -104,15 +104,16 @@ def clean_up():
 
 def main():
     # Compile regex patterns in order to parse filenames
-    filename_patterns = [
+    source_patterns = [
         re.compile(
             re.sub(r"%([A-Z_]+)%", lambda m: fr"(?P<{m.group(1)}>.+)", re.escape(fmt))
         )
         for fmt in FILENAME_FORMATS.split(",")
     ]
+    class_pattern = re.sub(r"%([A-Z_]+)%", lambda m: f"{{{m.group(1)}}}", CLASS_NAME_FORMAT)
 
     while True:
-        check(filename_patterns)
+        check(source_patterns, class_pattern)
         clean_up()
 
         time.sleep(CHECK_INTERVAL_SECONDS)

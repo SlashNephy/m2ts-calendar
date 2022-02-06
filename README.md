@@ -22,6 +22,7 @@ services:
       SOURCE_FILE_GLOB: '**/*.m2ts'
       INCLUDE_CHAPTER_FILE: 1
       TARGET_DIRECTORY: '/mnt/records_links'
+      CLASS_NAME_FORMAT: '%YEAR%-%MONTH%'
       DEFAULT_CLASS_NAME: 'misc'
       CHECK_INTERVAL_SECONDS: 60
       CONVERT_SHORTYEAR_TO_FULLYEAR: 1
