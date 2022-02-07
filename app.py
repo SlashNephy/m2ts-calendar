@@ -113,14 +113,38 @@ def clean_up():
                 if not DRYRUN:
                     path.rmdir()
 
-def main():
-    # Compile regex patterns in order to parse filenames
-    source_patterns = [
+# Compile regex patterns in order to parse filenames
+def compile_source_patterns():
+    regex_syntax = {
+        "YEAR": r"\d{4}",
+        "SHORTYEAR": r"\d{2}",
+        "MONTH": r"\d{2}",
+        "DAY": r"\d{2}",
+        "HOUR": r"\d{2}",
+        "MIN": r"\d{2}",
+        "SEC": r"\d{2}",
+        "DOW": r".",
+        "TYPE": r"[A-Z]+",
+        "CHID": r"\d+",
+        "CHNAME": r".+",
+        "HALF_WIDTH_CHNAME": r".+",
+        "CH": r"\d+",
+        "SID": r"\d+",
+        "ID": r"\d+",
+        "TITLE": r".+",
+        "HALF_WIDTH_TITLE": r".+",
+    }
+
+    return [
         re.compile(
-            re.sub(r"%([A-Z_]+)%", lambda m: fr"(?P<{m.group(1)}>.+)", re.escape(fmt))
+            re.sub(r"%([A-Z_]+)%", lambda m: f"(?P<{m.group(1)}>{regex_syntax[m.group(1)]})", re.escape(fmt))
         )
         for fmt in FILENAME_FORMATS
     ]
+
+
+def main():
+    source_patterns = compile_source_patterns()
     if not source_patterns:
         raise ValueError("No filename patterns defined")
 
