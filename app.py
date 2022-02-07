@@ -124,7 +124,7 @@ def compile_source_patterns():
         "MIN": r"\d{2}",
         "SEC": r"\d{2}",
         "DOW": r".",
-        "TYPE": r"[A-Z]+",
+        "TYPE": r".+",
         "CHID": r"\d+",
         "CHNAME": r".+",
         "HALF_WIDTH_CHNAME": r".+",
