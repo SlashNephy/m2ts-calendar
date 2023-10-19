@@ -1,0 +1,23 @@
+name: 'Build Image'
+
+on:
+  push:
+
+  release:
+    types:
+      - published
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+  security-events: write
+
+jobs:
+  build:
+    uses: SlashNephy/.github/.github/workflows/docker-build.yml@master
+    with:
+      image-name: ghcr.io/slashnephy/m2ts-calendar
+      image-platforms: linux/amd64
