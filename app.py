@@ -154,6 +154,9 @@ def main():
         check(source_patterns, class_pattern)
         clean_up()
 
+        if not CHECK_INTERVAL_SECONDS:
+            break
+
         time.sleep(CHECK_INTERVAL_SECONDS)
 
 
