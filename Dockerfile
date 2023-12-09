@@ -1,4 +1,4 @@
-FROM python:3.12.0-slim-bookworm@sha256:19a6235339a74eca01227b03629f63b6f5020abc21142436eced6ec3a9839a76
+FROM python:3.12.1-slim-bookworm@sha256:123229cfb27c384ee1fcc15aec660ad280a09121b7893377e80ae1b2e72cf942
 
 COPY ./app.py /app.py
 
